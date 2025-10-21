@@ -123,6 +123,7 @@ int **eff_mat_mul(int **A1, int **A2, int A, int B, int N, int r, int n_proc, in
         // a31 a32 a33      b31 b32     c31 (r=0) c32 (r=1)     c20 c21
         // a41 a42 a43                  c41 (r=2) c42 (r=3)     c30 c31 -> 
         // -> 8/4 = 2 so each cores 2 operations
+        // c12 = (a11 * b12) + (a12 * b22) + (a12 * b32) => (A1[0][0] * A2[0][1]) + (A1[0][1] * A2[1][1]) + (A1[0][2] * A2[2][1])
         //
         // r=0 and r=1 (2 cores but operarions 8)
         //
@@ -156,9 +157,22 @@ int **eff_mat_mul(int **A1, int **A2, int A, int B, int N, int r, int n_proc, in
         int cij = 0;
         
         if (r == 0) {
-
-        } else {
             for (int k = 0; k < N; k++) {
+                C[0][0] += (A1[0][k] * A2[k][0]);
+            }
+
+            for (int source = 1; source < n_proc; source++) {
+                MPI_Recv(&cij, 1, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+                int i = source / B;
+                int j = source % B;
+
+                C[i][j] = cij;
+            }
+
+            return C;
+        } else {
+            for (int k = 0; k < n_proc; k++) {
                 int i = r / B;
                 int j = r % B;
 
