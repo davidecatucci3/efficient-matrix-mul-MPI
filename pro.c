@@ -123,7 +123,7 @@ int **eff_mat_mul(int **A1, int **A2, int A, int B, int N, int r, int n_proc, in
         // a31 a32 a33      b31 b32     c31 (r=0) c32 (r=1)     c20 c21
         // a41 a42 a43                  c41 (r=2) c42 (r=3)     c30 c31 -> 
         // -> 8/4 = 2 so each cores 2 operations
-        // c12 = (a11 * b12) + (a12 * b22) + (a12 * b32) => (A1[0][0] * A2[0][1]) + (A1[0][1] * A2[1][1]) + (A1[0][2] * A2[2][1])
+        // c12 (01) = (a11 * b12) + (a12 * b22) + (a12 * b32) => (A1[0][0] * A2[0][1]) + (A1[0][1] * A2[1][1]) + (A1[0][2] * A2[2][1])
         //
         // r=0 and r=1 (2 cores but operarions 8)
         //
@@ -150,40 +150,63 @@ int **eff_mat_mul(int **A1, int **A2, int A, int B, int N, int r, int n_proc, in
         // 
         // they aggregate to which core?
         // given n_proc, r calculate ij -> 4,1=01,21   4,2=10,30    4,3=11,31    4,0=00,20
+        // x = (A * B) / n_proc
         // i = r / B; so 1 / 2 = 0 -> i=0, 0+2(4-2)=2
-        // j = r % B; so 1 % 2 = 1-> j=1, 
+        // j = r % B; so 1 % 2 = 1-> j=1, cij = c[(r / B) + x][r % B] = 
 
         int **C = alloc_matrix(A, N);
         int cij = 0;
+        int skip = (A*B + n_proc - 1) / n_proc;
         
         if (r == 0) {
-            for (int k = 0; k < N; k++) {
-                C[0][0] += (A1[0][k] * A2[k][0]);
-            }
+            for (int x = 0; x < skip && x < A*B; x++) {
+                int linear = r * skip + x;
+                int i = linear / B;
+                int j = linear % B;
+                if (i >= N) break;
 
-            for (int source = 1; source < n_proc; source++) {
-                MPI_Recv(&cij, 1, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                cij = 0;
 
-                int i = source / B;
-                int j = source % B;
+                for (int k = 0; k < N; k++)
+                    cij += A1[i][k] * A2[k][j];
 
                 C[i][j] = cij;
             }
 
-            return C;
-        } else {
-            for (int k = 0; k < n_proc; k++) {
-                int i = r / B;
-                int j = r % B;
+            for (int source = 1; source < n_proc; source++) {
+                for (int x = 0; x < skip; x++) {
+                    int linear = source * skip + x;
+                    int i = linear / B;
+                    int j = linear % B;
+                    if (i >= N) break;
 
-                cij += A1[i][k] * A2[k][j];
+                    MPI_Recv(&C[i][j], 1, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                }
             }
 
-            MPI_Send(&cij, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+            return C;
+        } else {
+            for (int x = 0; x < skip; x++) {
+                for (int k = 0; k < N; k++) {
+                    int linear = r * skip + x;
+                    int i = linear / B;
+                    int j = linear % B;
+
+                    if (i >= N) break;
+
+                    cij += A1[i][k] * A2[k][j];
+                }
+                
+                MPI_Send(&cij, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+            }
         }
 
+        return C;
     } else { // A*B < n_cores
+        int **C = alloc_matrix(A, N);
+        int cij = 0;
 
+        return C;
     }
 }
 
@@ -238,7 +261,7 @@ int main(int argc, char *argv[]) {
             printMatrix("Matrix A2", A2, N, B);
             printMatrix("Result C1", C1, A, B);
         }
-    else if (A * B > n_cores) {
+    } else if (A * B > n_cores) {
         int **C1 = eff_mat_mul(A1, A2, A, B, N, rank, n_proc, 1);
 
         if (rank == 0) {
@@ -259,4 +282,10 @@ int main(int argc, char *argv[]) {
     MPI_Finalize();
 
     return 0;
+}
+
+
+{
+// c++ a[i][j
+
 }
