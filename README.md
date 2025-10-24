@@ -1,5 +1,4 @@
 # efficient-matrix-mul-MPI
-## 🧩 Overview
 This project implements an **efficient matrix multiplication** algorithm using **MPI (Message Passing Interface)**.  
 The goal is to perform parallel matrix multiplication while **optimally managing the number of active processes** relative to the number of available CPU cores.
 
