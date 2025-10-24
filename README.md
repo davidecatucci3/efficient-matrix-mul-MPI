@@ -44,10 +44,6 @@ This approach ensures efficient CPU utilization whether matrices are small, larg
 
 ---
 
-## 🧠 Example
-
-For example, multiplying:
-
 ## 🧩 Compilation
 
 Use `mpicc` to compile the program:
