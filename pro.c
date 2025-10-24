@@ -155,15 +155,15 @@ int **eff_mat_mul(int **A1, int **A2, int A, int B, int N, int r, int n_proc, in
         // j = r % B; so 1 % 2 = 1-> j=1, cij = c[(r / B) + x][r % B] = 
 
         int **C = alloc_matrix(A, N);
-        int cij = 0;
-        int skip = (A*B + n_proc - 1) / n_proc;
-        
+        int cij;
+        int total = A * B;
+        int skip = (total + n_proc - 1) / n_proc;
+
         if (r == 0) {
-            for (int x = 0; x < skip && x < A*B; x++) {
+            for (int x = 0; x < skip; x++) {
                 int linear = r * skip + x;
                 int i = linear / B;
                 int j = linear % B;
-                if (i >= N) break;
 
                 cij = 0;
 
@@ -173,12 +173,12 @@ int **eff_mat_mul(int **A1, int **A2, int A, int B, int N, int r, int n_proc, in
                 C[i][j] = cij;
             }
 
-            for (int source = 1; source < n_proc; source++) {
+            MPI_Recv(&C[i][j], 1, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        
                 for (int x = 0; x < skip; x++) {
                     int linear = source * skip + x;
                     int i = linear / B;
                     int j = linear % B;
-                    if (i >= N) break;
 
                     MPI_Recv(&C[i][j], 1, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 }
@@ -187,16 +187,15 @@ int **eff_mat_mul(int **A1, int **A2, int A, int B, int N, int r, int n_proc, in
             return C;
         } else {
             for (int x = 0; x < skip; x++) {
-                for (int k = 0; k < N; k++) {
-                    int linear = r * skip + x;
-                    int i = linear / B;
-                    int j = linear % B;
+                int linear = r * skip + x;
+                int i = linear / B;
+                int j = linear % B;
 
-                    if (i >= N) break;
+                cij = 0;
 
+                for (int k = 0; k < N; k++)
                     cij += A1[i][k] * A2[k][j];
-                }
-                
+
                 MPI_Send(&cij, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
             }
         }
@@ -282,10 +281,4 @@ int main(int argc, char *argv[]) {
     MPI_Finalize();
 
     return 0;
-}
-
-
-{
-// c++ a[i][j
-
 }
