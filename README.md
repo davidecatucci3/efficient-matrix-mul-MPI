@@ -56,3 +56,5 @@ Use `mpicc` to compile the program:
 mpicc -o matmul mpi_matmul.c
 mpirun -np 8 ./matmul -A 4 -B 4 -N 3
 ```
+
+mpirun -np <NUM_PROCESSES> ./matmul -A <rows_A> -B <cols_B> -N <shared_dim>
