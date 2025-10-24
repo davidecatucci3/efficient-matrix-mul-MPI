@@ -36,7 +36,7 @@ There are three computation modes, automatically chosen based on matrix size and
 Typical MPI matrix multiplication launches one process per matrix cell or per row.  
 This implementation introduces an **adaptive strategy**:
 
-- If the number of required operations (`A×B`) is smaller than or equal to the number of cores, each process handles one element.
+- If the number of required operations (`A×B`) is equal to the number of cores, each process handles one element.
 - If more operations exist than available cores, tasks are **divided dynamically** so that each process computes multiple cells in the result matrix.
 - The goal is to **avoid idle processes** and **minimize communication overhead**.
 
