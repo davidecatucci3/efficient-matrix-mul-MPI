@@ -27,7 +27,7 @@ There are three computation modes, automatically chosen based on matrix size and
    - Results are merged efficiently through MPI communication.
 
 3. **Mode 2** (`A×B < n_cores`):  
-   - When there are **fewer operations than cores**, some cores remain idle.  
+   - When there are **fewer operations than cores**, n_cores are created but just A*B are used at the end.
    - Future improvements may include assigning extra multiplications to idle cores.
 
 ---
